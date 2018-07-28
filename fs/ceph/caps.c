@@ -156,6 +156,37 @@ void ceph_adjust_min_caps(struct ceph_mds_client *mdsc, int delta)
 	spin_unlock(&mdsc->caps_list_lock);
 }
 
+void __ceph_unreserve_caps(struct ceph_mds_client *mdsc, int nr_caps)
+{
+	struct ceph_cap *cap;
+	int i;
+
+	if (nr_caps) {
+		BUG_ON(mdsc->caps_reserve_count < nr_caps);
+		mdsc->caps_reserve_count -= nr_caps;
+		if (mdsc->caps_avail_count >=
+		    mdsc->caps_reserve_count + mdsc->caps_min_count) {
+			mdsc->caps_total_count -= nr_caps;
+			for (i = 0; i < nr_caps; i++) {
+				cap = list_first_entry(&mdsc->caps_list,
+					struct ceph_cap, caps_item);
+				list_del(&cap->caps_item);
+				kmem_cache_free(ceph_cap_cachep, cap);
+			}
+		} else {
+			mdsc->caps_avail_count += nr_caps;
+		}
+
+		dout("%s: caps %d = %d used + %d resv + %d avail\n",
+		     __func__,
+		     mdsc->caps_total_count, mdsc->caps_use_count,
+		     mdsc->caps_reserve_count, mdsc->caps_avail_count);
+		BUG_ON(mdsc->caps_total_count != mdsc->caps_use_count +
+						 mdsc->caps_reserve_count +
+						 mdsc->caps_avail_count);
+	}
+}
+
 /*
  * Called under mdsc->mutex.
  */
