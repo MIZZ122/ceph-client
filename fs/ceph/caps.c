@@ -294,7 +294,7 @@ int ceph_reserve_caps(struct ceph_mds_client *mdsc,
 	return err;
 }
 
-int ceph_unreserve_caps(struct ceph_mds_client *mdsc,
+void ceph_unreserve_caps(struct ceph_mds_client *mdsc,
 			struct ceph_cap_reservation *ctx)
 {
 	dout("unreserve caps ctx=%p count=%d\n", ctx, ctx->count);
@@ -302,7 +302,6 @@ int ceph_unreserve_caps(struct ceph_mds_client *mdsc,
 	__ceph_unreserve_caps(mdsc, ctx->count);
 	ctx->count = 0;
 	spin_unlock(&mdsc->caps_list_lock);
-	return 0;
 }
 
 struct ceph_cap *ceph_get_cap(struct ceph_mds_client *mdsc,
